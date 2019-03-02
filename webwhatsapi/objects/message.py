@@ -192,17 +192,30 @@ class NotificationMessage(Message):
                 'create': "Created group",
                 'add': "Added to group",
                 'remove': "Removed from group",
-                'leave': "Left the group"
+                'leave': "Left the group",
+                'subject': "Changed chat title"
             }
         }
         sender = "" if not self.sender else ("from " + str(safe_str(self.sender.get_safe_name())))
-        return "<NotificationMessage - {type} {recip} {sender} at {timestamp}>".format(
-            type=readable[self.type][self.subtype],
-            sender=sender,
-            timestamp=self.timestamp,
-            recip="" if not hasattr(self, 'recipients') else "".join(
-                [safe_str(x.get_safe_name()) for x in self.recipients]),
-        )
+        try:
+            result_str = "<NotificationMessage - {type} {recip} {sender} at {timestamp}>".format(
+                type=readable[self.type][self.subtype],
+                sender=sender,
+                timestamp=self.timestamp,
+                recip="" if not hasattr(self, 'recipients') else "".join(
+                    [safe_str(x.get_safe_name()) for x in self.recipients])
+            )
+        except:
+            result_str = "<NotificationMessage - not safely printable (check messages.py line 207).\n Debug data:\n    readable array: {readarr}\n   self.type: {selft}\n   self.subtype: {selfst}\n   sender: {sender}\n   timestamp: {timestamp}\n   recipients: {recip}".format(
+                readarr = readable,
+                selft = self.type,
+                selfst = self.subtype,
+                sender=sender,
+                timestamp=self.timestamp,
+                recip="" if not hasattr(self, 'recipients') else self.recipients
+            )
+                
+        return result_str
 
 
 class MessageGroup(object):
