@@ -16,6 +16,7 @@ from cryptography.hazmat.backends import default_backend
 from axolotl.kdf.hkdfv3 import HKDFv3
 from axolotl.util.byteutil import ByteUtil
 from base64 import b64decode, b64encode
+# from winmagic import magic  # that worked for me under windows, not the simple import magic
 import magic
 from io import BytesIO
 from selenium import webdriver
@@ -23,6 +24,11 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.firefox.options import Options
+# In order to use a specific version of firefox with selenium (FF 61.0.2),
+# while keeping the FF you're using to browse up to date,
+# you will need to point that version with these statements
+# FF 61.0.2 - Statement 1
+# from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -194,6 +200,10 @@ class WhatsAPIDriver(object):
 
             self.logger.info("Starting webdriver")
             self.driver = webdriver.Firefox(capabilities=capabilities, options=options, **extra_params)
+            # FF 61.0.2 - Statement 2
+            # binary = FirefoxBinary('C:/your_path_to/Firefox 61.0.2/core/firefox.exe') 
+            # self.driver = webdriver.Firefox(firefox_binary=binary, capabilities=capabilities, executable_path="C:/your_path_to/geckodriver.exe", options=options, **extra_params )
+
 
         elif self.client == "chrome":
             self._profile = webdriver.ChromeOptions()
@@ -541,6 +551,37 @@ class WhatsAPIDriver(object):
             return factory_message(result, self)
         return result
 
+    
+    # I couldn't find send_media anymore in this version, I had to copy the code 
+    # for send_media and convert_to_base64 from an older version
+    def convert_to_base64(self, path):
+        """
+        :param path: file path
+        :return: returns the converted string and formatted for the send media function send_media
+        """
+
+        mime = magic.Magic(mime=True)
+        content_type = mime.from_file(path)
+        archive = ''
+        with open(path, "rb") as image_file:
+            archive = b64encode(image_file.read())
+            archive = archive.decode('utf-8')
+        return 'data:' + content_type + ';base64,' + archive
+
+
+    def send_media(self, path, chatid, caption):
+        """
+            converts the file to base64 and sends it using the sendImage function of wapi.js
+        :param path: file path
+        :param chatid: chatId to be sent
+        :param caption:
+        :return:
+        """
+        imgBase64 = self.convert_to_base64(path)
+        filename = os.path.split(path)[-1]
+        return self.wapi_functions.sendImage(imgBase64, chatid, filename, caption)
+
+    
     def send_message_to_id(self, recipient, message):
         """
         Send a message to a chat given its ID
